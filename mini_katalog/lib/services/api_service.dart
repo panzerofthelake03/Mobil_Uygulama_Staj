@@ -13,13 +13,18 @@ class ApiService {
       final response = await request.close();
       final body = await response.transform(utf8.decoder).join();
       client.close();
-      final data = json.decode(body);
-      if (data is List) {
-        return data
-            .map((e) => Product.fromJson(e as Map<String, dynamic>))
-            .toList();
+      final decoded = json.decode(body);
+      List<dynamic> list;
+      if (decoded is List) {
+        list = decoded;
+      } else if (decoded is Map && decoded['data'] is List) {
+        list = decoded['data'] as List<dynamic>;
+      } else {
+        return _mockProducts;
       }
-      return [];
+      return list
+          .map((e) => Product.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       return _mockProducts;
     }

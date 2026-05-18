@@ -18,13 +18,26 @@ class Product {
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
+    // Parse specs: can be a nested Map or flat fields
     final specsMap = <String, String>{};
-    if (json['size'] != null) specsMap['Size'] = json['size'].toString();
-    if (json['audio'] != null) specsMap['Audio'] = json['audio'].toString();
-    if (json['color'] != null) specsMap['Color'] = json['color'].toString();
-    if (json['weight'] != null) specsMap['Weight'] = json['weight'].toString();
-    if (json['rating'] is Map) {
-      specsMap['Rating'] = json['rating']['rate'].toString();
+    if (json['specs'] is Map) {
+      (json['specs'] as Map).forEach((k, v) {
+        if (v != null) specsMap[_capitalize(k.toString())] = v.toString();
+      });
+    } else {
+      if (json['size'] != null) specsMap['Size'] = json['size'].toString();
+      if (json['audio'] != null) specsMap['Audio'] = json['audio'].toString();
+      if (json['color'] != null) specsMap['Color'] = json['color'].toString();
+    }
+
+    // Parse price: handles "$999", "1,299", 999 (num)
+    double parsedPrice = 0.0;
+    final rawPrice = json['price'];
+    if (rawPrice is num) {
+      parsedPrice = rawPrice.toDouble();
+    } else if (rawPrice != null) {
+      final cleaned = rawPrice.toString().replaceAll(RegExp(r'[^\d.]'), '');
+      parsedPrice = double.tryParse(cleaned) ?? 0.0;
     }
 
     return Product(
@@ -32,15 +45,16 @@ class Product {
           ? json['id']
           : int.tryParse(json['id'].toString()) ?? 0,
       name: (json['name'] ?? json['title'] ?? '').toString(),
-      category: (json['category'] ?? '').toString(),
-      price: json['price'] is num
-          ? (json['price'] as num).toDouble()
-          : double.tryParse(json['price'].toString()) ?? 0.0,
+      category: (json['category'] ?? json['tagline'] ?? '').toString(),
+      price: parsedPrice,
       description: (json['description'] ?? '').toString(),
       image: (json['image'] ?? json['thumbnail'] ?? '').toString(),
       specs: specsMap,
     );
   }
+
+  static String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   Map<String, dynamic> toJson() => {
         'id': id,
